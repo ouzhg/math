@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primary School Math Practice</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f8ff; /* Light blue background */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 1024px; /* Optimized for iPad landscape */
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        /* Header and Buttons */
+        header {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            font-size: 1.2rem;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        #create-btn {
+            background-color: #4CAF50; /* Green */
+        }
+
+        #create-btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        #check-btn {
+            background-color: #008CBA; /* Blue */
+        }
+
+        #check-btn:hover {
+            background-color: #007ba7;
+            transform: scale(1.05);
+        }
+
+        /* Quiz Container - iPad Landscape Grid */
+        #quiz-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 columns for landscape iPad */
+            gap: 20px;
+        }
+
+        /* Individual Question Card */
+        .question-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            transition: color 0.3s;
+        }
+        
+        /* Class to mark incorrect answers */
+        .incorrect {
+            color: #D8000C; /* Red for wrong answer text */
+        }
+        
+        .options-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 columns for the 4 options */
+            gap: 10px;
+        }
+
+        .options-container label {
+            display: flex;
+            align-items: center;
+            background-color: #e9e9e9;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .options-container label:hover {
+            background-color: #dcdcdc;
+        }
+
+        .options-container input[type="radio"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
+        /* Responsive: For smaller screens (like phones), switch to a single column */
+        @media (max-width: 768px) {
+            #quiz-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <header>
+            <button id="create-btn" class="btn">Create Questions</button>
+            <button id="check-btn" class="btn">Check Answers</button>
+        </header>
+        <main id="quiz-container">
+            <p style="text-align: center; grid-column: 1 / -1;">Click "Create Questions" to start! ✨</p>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const createBtn = document.getElementById('create-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const quizContainer = document.getElementById('quiz-container');
+
+            createBtn.addEventListener('click', generateQuiz);
+            checkBtn.addEventListener('click', checkAnswers);
+
+            /**
+             * Generates and displays 20 math questions.
+             */
+            function generateQuiz() {
+                // Clear previous questions and state
+                quizContainer.innerHTML = ''; 
+
+                for (let i = 0; i < 20; i++) {
+                    // Randomly choose between addition '+' and subtraction '-'
+                    const operator = Math.random() < 0.5 ? '+' : '-';
+                    
+                    let num1, num2, correctAnswer;
+
+                    // The first number is between 0 and 10
+                    num1 = Math.floor(Math.random() * 11);
+
+                    if (operator === '+') {
+                        // For addition, ensure the sum is simple (e.g., not exceeding 20)
+                        num2 = Math.floor(Math.random() * (21 - num1)); 
+                        correctAnswer = num1 + num2;
+                    } else { // Subtraction
+                        // For subtraction, ensure the result is not negative (num2 <= num1)
+                        num2 = Math.floor(Math.random() * (num1 + 1));
+                        correctAnswer = num1 - num2;
+                    }
+
+                    // Generate four unique multiple-choice options
+                    const options = new Set();
+                    options.add(correctAnswer);
+
+                    // Generate 3 unique "distractor" answers
+                    while (options.size < 4) {
+                        let distractor = correctAnswer + Math.floor(Math.random() * 7) - 3;
+                        if (distractor >= 0 && distractor !== correctAnswer) {
+                            options.add(distractor);
+                        }
+                    }
+
+                    // Shuffle the options so the correct answer isn't always in the same spot
+                    const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
+
+                    // Create the HTML elements for the question card
+                    const questionCard = document.createElement('div');
+                    questionCard.className = 'question-card';
+                    questionCard.dataset.answer = correctAnswer; // Store correct answer in a data attribute
+
+                    const questionText = `${i + 1}. ${num1} ${operator} ${num2} = ?`;
+
+                    let optionsHTML = '';
+                    shuffledOptions.forEach(option => {
+                        optionsHTML += `
+                            <label>
+                                <input type="radio" name="q${i}" value="${option}"> ${option}
+                            </label>
+                        `;
+                    });
+
+                    questionCard.innerHTML = `
+                        <p class="question-text">${questionText}</p>
+                        <div class="options-container">
+                            ${optionsHTML}
+                        </div>
+                    `;
+
+                    quizContainer.appendChild(questionCard);
+                }
+            }
+
+            /**
+             * Checks all answers and marks incorrect ones in red.
+             */
+            function checkAnswers() {
+                const allQuestions = quizContainer.querySelectorAll('.question-card');
+
+                if (allQuestions.length === 0) {
+                    alert('Please create the questions first!');
+                    return;
+                }
+                
+                allQuestions.forEach((card, index) => {
+                    const questionTextEl = card.querySelector('.question-text');
+                    const correctAnswer = card.dataset.answer;
+                    const selectedOption = card.querySelector(`input[name="q${index}"]:checked`);
+                    
+                    // Reset styling first before checking
+                    questionTextEl.classList.remove('incorrect');
+
+                    // Check if the selected answer is correct. Also marks unanswered questions as wrong.
+                    if (!selectedOption || selectedOption.value != correctAnswer) {
+                        questionTextEl.classList.add('incorrect');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
