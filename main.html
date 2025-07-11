@@ -162,8 +162,8 @@
                     
                     let num1, num2, correctAnswer;
 
-                    // The first number is between 0 and 10
-                    num1 = Math.floor(Math.random() * 11);
+                    // The first number is between 0 and 9
+                    num1 = Math.floor(Math.random() * 10);
 
                     if (operator === '+') {
                         // For addition, ensure the sum is simple (e.g., not exceeding 20)
@@ -195,7 +195,7 @@
                     questionCard.className = 'question-card';
                     questionCard.dataset.answer = correctAnswer; // Store correct answer in a data attribute
 
-                    const questionText = `${i + 1}. ${num1} ${operator} ${num2} = ?`;
+                    const questionText = `${i + 1}# ${num1} ${operator} ${num2} = ?`;
 
                     let optionsHTML = '';
                     shuffledOptions.forEach(option => {
