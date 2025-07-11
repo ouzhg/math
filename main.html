@@ -8,11 +8,11 @@
         /* General Styles */
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f0f8ff; /* Light blue background */
+            background-color: #f0f8ff;
             color: #333;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
@@ -26,6 +26,7 @@
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             padding: 20px;
+            margin-top: 80px; /* Add margin to avoid overlapping with fixed elements */
         }
 
         /* Header and Buttons */
@@ -67,6 +68,39 @@
             transform: scale(1.05);
         }
 
+        /* Top Bar for Score and Timer */
+        #top-bar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        #score-display, #timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        #score-display {
+            background-color: #28a745; /* Success Green */
+            color: white;
+        }
+
+        #score-display.hidden {
+            display: none;
+        }
+        
+        #timer {
+            background-color: #ffc107; /* Amber color */
+            color: #333;
+        }
+
         /* Quiz Container - iPad Landscape Grid */
         #quiz-container {
             display: grid;
@@ -84,20 +118,25 @@
 
         .question-text {
             font-size: 1.3rem;
-            font-weight: bold;
+            font-weight: normal; /* Keep the math part normal weight */
             margin-top: 0;
             margin-bottom: 15px;
             transition: color 0.3s;
         }
         
-        /* Class to mark incorrect answers */
-        .incorrect {
+        .question-number {
+            font-weight: bold; /* Make the "Question X:" part bold */
+            color: #0056b3;
+            margin-right: 8px;
+        }
+        
+        .incorrect .question-number {
             color: #D8000C; /* Red for wrong answer text */
         }
         
         .options-container {
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 2 columns for the 4 options */
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
         }
 
@@ -120,15 +159,25 @@
             transform: scale(1.2);
         }
         
-        /* Responsive: For smaller screens (like phones), switch to a single column */
         @media (max-width: 768px) {
             #quiz-container {
                 grid-template-columns: 1fr;
+            }
+             #app-container {
+                margin-top: 100px;
+            }
+            #top-bar {
+                flex-direction: column-reverse;
+                align-items: flex-end;
             }
         }
     </style>
 </head>
 <body>
+    <div id="top-bar">
+        <div id="score-display" class="hidden">0/20</div>
+        <div id="timer">00:00:00</div>
+    </div>
 
     <div id="app-container">
         <header>
@@ -145,58 +194,103 @@
             const createBtn = document.getElementById('create-btn');
             const checkBtn = document.getElementById('check-btn');
             const quizContainer = document.getElementById('quiz-container');
+            const timerEl = document.getElementById('timer');
+            const scoreDisplayEl = document.getElementById('score-display');
+
+            // --- Timer variables ---
+            let timerInterval = null;
+            let centiseconds = 0; // Use hundredths of a second for precision
 
             createBtn.addEventListener('click', generateQuiz);
-            checkBtn.addEventListener('click', checkAnswers);
+            checkBtn.addEventListener('click', () => {
+                checkAnswers();
+                stopTimer(); // Also stop timer on manual check
+            });
+            quizContainer.addEventListener('change', checkIfAllAnswered);
+
+            // --- Timer Functions ---
+
+            /**
+             * Formats total centiseconds into a MM:SS:ss string.
+             * @param {number} totalCentiseconds - The total centiseconds elapsed.
+             * @returns {string} The formatted time string.
+             */
+            function formatTime(totalCentiseconds) {
+                const min = Math.floor(totalCentiseconds / 6000);
+                const sec = Math.floor((totalCentiseconds % 6000) / 100);
+                const cs = totalCentiseconds % 100;
+                
+                return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}:${cs.toString().padStart(2, '0')}`;
+            }
+            
+            /**
+             * Starts the timer, updating it every 10 milliseconds.
+             */
+            function startTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+                
+                centiseconds = 0;
+                timerEl.textContent = formatTime(centiseconds);
+
+                timerInterval = setInterval(() => {
+                    centiseconds++;
+                    timerEl.textContent = formatTime(centiseconds);
+                }, 10); // Update every 10ms for hundredths of a second
+            }
+
+            /**
+             * Stops the timer.
+             */
+            function stopTimer() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // --- Quiz Functions ---
 
             /**
              * Generates and displays 20 math questions.
              */
             function generateQuiz() {
-                // Clear previous questions and state
-                quizContainer.innerHTML = ''; 
+                quizContainer.innerHTML = '';
+                scoreDisplayEl.classList.add('hidden'); // Hide score on new quiz
+                startTimer();
 
                 for (let i = 0; i < 20; i++) {
-                    // Randomly choose between addition '+' and subtraction '-'
                     const operator = Math.random() < 0.5 ? '+' : '-';
-                    
                     let num1, num2, correctAnswer;
 
-                    // The first number is between 0 and 9
-                    num1 = Math.floor(Math.random() * 10);
+                    num1 = Math.floor(Math.random() * 11);
 
                     if (operator === '+') {
-                        // For addition, ensure the sum is simple (e.g., not exceeding 20)
-                        num2 = Math.floor(Math.random() * (21 - num1)); 
+                        num2 = Math.floor(Math.random() * (21 - num1));
                         correctAnswer = num1 + num2;
-                    } else { // Subtraction
-                        // For subtraction, ensure the result is not negative (num2 <= num1)
+                    } else {
                         num2 = Math.floor(Math.random() * (num1 + 1));
                         correctAnswer = num1 - num2;
                     }
 
-                    // Generate four unique multiple-choice options
-                    const options = new Set();
-                    options.add(correctAnswer);
-
-                    // Generate 3 unique "distractor" answers
+                    const options = new Set([correctAnswer]);
                     while (options.size < 4) {
                         let distractor = correctAnswer + Math.floor(Math.random() * 7) - 3;
-                        if (distractor >= 0 && distractor !== correctAnswer) {
+                        if (distractor >= 0 && !options.has(distractor)) {
                             options.add(distractor);
                         }
                     }
 
-                    // Shuffle the options so the correct answer isn't always in the same spot
                     const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
-
-                    // Create the HTML elements for the question card
                     const questionCard = document.createElement('div');
                     questionCard.className = 'question-card';
-                    questionCard.dataset.answer = correctAnswer; // Store correct answer in a data attribute
+                    questionCard.dataset.answer = correctAnswer;
 
-                    const questionText = `${i + 1}# ${num1} ${operator} ${num2} = ?`;
-
+                    // Updated question text with styled number
+                    const questionTextHTML = `
+                        <p class="question-text">
+                            <span class="question-number">Question ${i + 1}:</span>
+                            ${num1} ${operator} ${num2} = ?
+                        </p>
+                    `;
+                    
                     let optionsHTML = '';
                     shuffledOptions.forEach(option => {
                         optionsHTML += `
@@ -207,40 +301,59 @@
                     });
 
                     questionCard.innerHTML = `
-                        <p class="question-text">${questionText}</p>
+                        ${questionTextHTML}
                         <div class="options-container">
                             ${optionsHTML}
                         </div>
                     `;
-
                     quizContainer.appendChild(questionCard);
+                }
+            }
+            
+            /**
+             * Checks if all questions have been answered. If so, stops timer and checks answers.
+             */
+            function checkIfAllAnswered() {
+                const totalQuestions = quizContainer.querySelectorAll('.question-card').length;
+                if (totalQuestions === 0) return;
+
+                const answeredQuestions = quizContainer.querySelectorAll('input[type="radio"]:checked').length;
+                
+                if (answeredQuestions === totalQuestions) {
+                    stopTimer();
+                    checkAnswers();
                 }
             }
 
             /**
-             * Checks all answers and marks incorrect ones in red.
+             * Checks all answers, marks incorrect ones, and displays the score.
              */
             function checkAnswers() {
                 const allQuestions = quizContainer.querySelectorAll('.question-card');
-
                 if (allQuestions.length === 0) {
                     alert('Please create the questions first!');
                     return;
                 }
+                
+                let correctCount = 0;
                 
                 allQuestions.forEach((card, index) => {
                     const questionTextEl = card.querySelector('.question-text');
                     const correctAnswer = card.dataset.answer;
                     const selectedOption = card.querySelector(`input[name="q${index}"]:checked`);
                     
-                    // Reset styling first before checking
                     questionTextEl.classList.remove('incorrect');
-
-                    // Check if the selected answer is correct. Also marks unanswered questions as wrong.
-                    if (!selectedOption || selectedOption.value != correctAnswer) {
+                    
+                    if (selectedOption && selectedOption.value == correctAnswer) {
+                        correctCount++;
+                    } else {
                         questionTextEl.classList.add('incorrect');
                     }
                 });
+
+                // Display the final score
+                scoreDisplayEl.textContent = `${correctCount}/${allQuestions.length}`;
+                scoreDisplayEl.classList.remove('hidden');
             }
         });
     </script>
